@@ -1,7 +1,8 @@
 import os
-import sqlite3
 import datetime
 import uuid
+import psycopg2
+import psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -11,19 +12,20 @@ app = Flask(__name__)
 app.secret_key = 'K9#mP2$vL5@qX7*tY1!wR4%zZ0^cN'
 
 # ==========================================
-# CONFIGURAÇÃO DO BANCO DE DADOS (SQLite)
+# CONFIGURAÇÃO DO BANCO DE DADOS (PostgreSQL / Supabase)
 # ==========================================
-BANCO_DADOS = 'dados.db'
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def conectar_banco():
-    conn = sqlite3.connect(BANCO_DADOS)
-    # Permite acessar os dados pelos nomes das colunas (como se fosse um dicionário)
-    conn.row_factory = sqlite3.Row 
+    # Conecta ao Supabase usando a variável de ambiente segura
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def inicializar_banco():
     conn = conectar_banco()
-    c = conn.cursor()
+    # O RealDictCursor faz o Postgres devolver os dados em formato de dicionário
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
     # Cria a tabela de usuários (se não existir)
     c.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
@@ -45,10 +47,12 @@ def inicializar_banco():
         )
     ''')
     conn.commit()
+    c.close()
     conn.close()
 
 # Roda a função para garantir que o banco existe assim que o código liga
-inicializar_banco()
+if DATABASE_URL:
+    inicializar_banco()
 
 
 # ==========================================
@@ -61,8 +65,13 @@ def login():
         senha = request.form['senha']
         
         conn = conectar_banco()
-        # Busca o usuário no banco de dados
-        user_db = conn.execute('SELECT * FROM usuarios WHERE usuario = ?', (usuario,)).fetchone()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Busca o usuário no banco de dados (usando %s no lugar de ?)
+        cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
+        user_db = cur.fetchone()
+        
+        cur.close()
         conn.close()
         
         # VERIFICAÇÃO DE SENHA CRIPTOGRAFADA
@@ -81,17 +90,23 @@ def cadastro():
         senha = request.form['senha']
         
         conn = conectar_banco()
-        user_db = conn.execute('SELECT * FROM usuarios WHERE usuario = ?', (usuario,)).fetchone()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
+        user_db = cur.fetchone()
         
         if user_db:
+            cur.close()
             conn.close()
             return render_template('cadastro.html', erro="Este usuário já existe.")
         
         # CRIPTOGRAFANDO A SENHA ANTES DE SALVAR
         senha_criptografada = generate_password_hash(senha)
         
-        conn.execute('INSERT INTO usuarios (usuario, senha) VALUES (?, ?)', (usuario, senha_criptografada))
+        cur.execute('INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)', (usuario, senha_criptografada))
         conn.commit()
+        
+        cur.close()
         conn.close()
         
         return render_template('cadastro.html', sucesso="Conta criada com sucesso! Faça o login.")
@@ -114,9 +129,13 @@ def index():
     
     usuario_atual = session['usuario']
     
-    # Busca os gastos apenas do usuário logado e converte para dicionário
+    # Busca os gastos apenas do usuário logado
     conn = conectar_banco()
-    gastos_db = conn.execute('SELECT * FROM gastos WHERE usuario = ?', (usuario_atual,)).fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM gastos WHERE usuario = %s', (usuario_atual,))
+    gastos_db = cur.fetchall()
+    
+    cur.close()
     conn.close()
     
     # Mantém a lógica transformando os dados do banco em uma lista de dicionários
@@ -186,13 +205,16 @@ def adicionar():
         
     novo_id = str(uuid.uuid4())
     
-    # Salva diretamente no banco de dados SQLite
+    # Salva diretamente no banco de dados Supabase
     conn = conectar_banco()
-    conn.execute('''
+    cur = conn.cursor()
+    cur.execute('''
         INSERT INTO gastos (id, usuario, descricao, valor, tipo, categoria, data, fixo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     ''', (novo_id, usuario_atual, descricao, valor, tipo, categoria, data_registro, fixo))
+    
     conn.commit()
+    cur.close()
     conn.close()
     
     return redirect(url_for('index', mes=mes, ano=ano))
@@ -208,16 +230,18 @@ def deletar(id_item):
     
     # Apaga do banco de dados garantindo que o usuário só apaga os próprios gastos
     conn = conectar_banco()
-    conn.execute('DELETE FROM gastos WHERE id = ? AND usuario = ?', (id_item, usuario_atual))
+    cur = conn.cursor()
+    cur.execute('DELETE FROM gastos WHERE id = %s AND usuario = %s', (id_item, usuario_atual))
+    
     conn.commit()
+    cur.close()
     conn.close()
     
     return redirect(url_for('index', mes=mes, ano=ano))
 
 
 # ==========================================
-# INICIALIZAÇÃO DO SERVIDOR (CONFIGURADO PARA O REPLIT)
+# INICIALIZAÇÃO DO SERVIDOR (CONFIGURADO PARA GUNICORN/RENDER)
 # ==========================================
 if __name__ == '__main__':
-    # Porta 8080 e host 0.0.0.0 liberam a porta correta para o Replit colocar online
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    app.run(debug=False, host='0.0.0.0')
