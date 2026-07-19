@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Controle Financeiro</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/icon.png" type="image/png">
+    <link rel="manifest" href="/static/manifest.json">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="animate-fade">
+
+    <div class="container">
+        <header>
+            <h1 style="display: flex; align-items: center; gap: 10px;">
+                <img src="https://api.dicebear.com/8.x/fun-emoji/svg?seed={{ usuario_atual }}" alt="Avatar" width="45" height="45" style="border-radius: 50%; background: #e0e0e0; padding: 2px;">
+                {{ usuario_atual }}
+            </h1>
+            <div class="header-botoes">
+                <button id="btn-olho" class="btn-tema" title="Esconder/Mostrar Valores">
+                    <i id="icone-olho" class="ph-fill ph-eye"></i>
+                </button>
+                <button id="btn-tema" class="btn-tema"><i class="ph-fill ph-moon"></i></button>
+                <a href="/sair" class="btn-sair"><i class="ph ph-sign-out"></i> Sair</a>
+            </div>
+        </header>
+
+        <div class="navegacao-mes">
+            <a href="/?mes={{ 12 if mes_atual == 1 else mes_atual - 1 }}&ano={{ ano_atual - 1 if mes_atual == 1 else ano_atual }}" class="btn-mes">
+                <i class="ph ph-caret-left"></i> Anterior
+            </a>
+            
+            <h2>{{ nome_mes_atual }}<br><span style="font-size: 0.8em; color: #a4b0be;">{{ ano_atual }}</span></h2>
+            
+            <a href="/?mes={{ 1 if mes_atual == 12 else mes_atual + 1 }}&ano={{ ano_atual + 1 if mes_atual == 12 else ano_atual }}" class="btn-mes">
+                Próximo <i class="ph ph-caret-right"></i>
+            </a>
+        </div>
+
+        <div class="painel">
+            <div class="card card-saldo">
+                <p>Saldo Geral do Mês</p>
+                <h2 id="saldo-geral" class="valor-monetario {% if saldo_total >= 0 %}texto-positivo{% else %}texto-negativo{% endif %}" data-valor="R$ {{ '%.2f'|format(saldo_total) }}">
+                    R$ {{ '%.2f'|format(saldo_total) }}
+                </h2>
+            </div>
+            <div class="resumo">
+                <div class="card card-entrada">
+                    <p>Entradas</p>
+                    <h3 id="saldo-entrada" class="valor-monetario texto-positivo" data-valor="R$ {{ '%.2f'|format(total_entradas) }}">
+                        R$ {{ '%.2f'|format(total_entradas) }}
+                    </h3>
+                </div>
+                <div class="card card-saida">
+                    <p>Saídas</p>
+                    <h3 id="saldo-saida" class="valor-monetario texto-negativo" data-valor="R$ {{ '%.2f'|format(total_saidas) }}">
+                        R$ {{ '%.2f'|format(total_saidas) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="linha-dupla">
+            <div class="box-metade">
+                <h3><i class="ph ph-plus-circle"></i> Novo Registro</h3>
+                <form action="/adicionar" method="POST">
+                    <input type="hidden" name="mes" value="{{ mes_atual }}">
+                    <input type="hidden" name="ano" value="{{ ano_atual }}">
+                    
+                    <input type="text" name="descricao" placeholder="Ex: Mercantil, Uber, Luz" required>
+                    <input type="text" name="valor" placeholder="Valor (Ex: 50.00)" required>
+                    
+                    <div class="radios">
+                        <label class="radio-entrada"><input type="radio" name="tipo" value="entrada" checked> Ganho</label>
+                        <label class="radio-saida"><input type="radio" name="tipo" value="saida"> Gasto</label>
+                    </div>
+
+                    <select name="categoria" class="select-categoria">
+                        <option value="Alimentação">🍔 Alimentação</option>
+                        <option value="Transporte">🚗 Transporte</option>
+                        <option value="Lazer">🍿 Lazer</option>
+                        <option value="Moradia">🏠 Moradia</option>
+                        <option value="Outros">💼 Outros</option>
+                    </select>
+
+                    <label class="checkbox-fixo">
+                        <input type="checkbox" name="fixo" value="sim"> Marcar como Gasto Fixo
+                    </label>
+
+                    <button type="submit" class="btn-salvar">Salvar Registro</button>
+                </form>
+            </div>
+
+            <div class="box-metade grafico-box">
+                <h3><i class="ph ph-chart-pie"></i> Divisão de Gastos</h3>
+                <div class="tamanho-grafico">
+                    <canvas id="graficoPizza"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="linha-dupla">
+            <div class="box-metade" style="min-height: 280px;">
+                <h3><i class="ph ph-chart-bar"></i> Comparativo: Mês Anterior vs Mês Atual</h3>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="graficoComparacao"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <h3><i class="ph ph-clock-history"></i> Histórico do Mês</h3>
+        <ul class="lista-historico">
+            {% for item in dados %}
+            <li class="item-{{ item.tipo }}">
+                <div class="item-info">
+                    <strong>{{ item.descricao }} <span class="badge-cat">{{ item.categoria }}</span></strong>
+                    <small>{{ item.data }} {% if item.fixo == 'sim' %} 📌 [Fixo] {% endif %}</small>
+                </div>
+                <div class="item-valor">
+                    <span class="valor-monetario" data-valor="{% if item.tipo == 'saida' %}-{% endif %}R$ {{ '%.2f'|format(item.valor) }}">
+                        {% if item.tipo == 'saida' %}-{% endif %}R$ {{ '%.2f'|format(item.valor) }}
+                    </span>
+                    <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-apagar" title="Apagar"><i class="ph ph-trash"></i></a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="menu-mobile">
+        <a href="/"><i class="ph ph-house"></i>Início</a>
+        <a href="#" onclick="document.querySelector('form input[name=descricao]').focus();"><i class="ph ph-plus-circle"></i>Adicionar</a>
+        <a href="/sair"><i class="ph ph-sign-out"></i>Sair</a>
+    </div>
+
+    <script>
+        // 1. SCRIPT DO MODO ESCURO
+        const btnTema = document.getElementById('btn-tema');
+        const body = document.body;
+        if(localStorage.getItem('tema') === 'escuro') {
+            body.classList.add('tema-escuro');
+            btnTema.innerHTML = '<i class="ph-fill ph-sun"></i>';
+        }
+        btnTema.addEventListener('click', () => {
+            body.classList.toggle('tema-escuro');
+            if(body.classList.contains('tema-escuro')) {
+                localStorage.setItem('tema', 'escuro');
+                btnTema.innerHTML = '<i class="ph-fill ph-sun"></i>';
+            } else {
+                localStorage.setItem('tema', 'claro');
+                btnTema.innerHTML = '<i class="ph-fill ph-moon"></i>';
+            }
+        });
+
+        // 2. SCRIPT DO MODO OLHINHO (PRIVACIDADE)
+        const btnOlho = document.getElementById('btn-olho');
+        const iconeOlho = document.getElementById('icone-olho');
+        let oculto = localStorage.getItem('valoresOcultos') === 'sim';
+
+        function aplicarOcultacao() {
+            const saldos = document.querySelectorAll('.valor-monetario');
+            saldos.forEach(el => {
+                if (oculto) {
+                    el.innerText = "R$ ••••";
+                } else {
+                    el.innerText = el.getAttribute('data-valor');
+                }
+            });
+            if (oculto) {
+                iconeOlho.className = "ph-fill ph-eye-slash";
+            } else {
+                iconeOlho.className = "ph-fill ph-eye";
+            }
+        }
+
+        btnOlho.addEventListener('click', () => {
+            oculto = !oculto;
+            localStorage.setItem('valoresOcultos', oculto ? 'sim' : 'nao');
+            aplicarOcultacao();
+        });
+        // Roda ao carregar a página para lembrar a última escolha
+        aplicarOcultacao();
+
+
+        // 3. CONFIGURAÇÃO DO GRÁFICO DE PIZZA (CATEGORIAS)
+        const categoriasContagem = {};
+        {% for item in dados %}
+            if ("{{item.tipo}}" === "saida") {
+                categoriasContagem["{{item.categoria}}"] = (categoriasContagem["{{item.categoria}}"] || 0) + {{item.valor}};
+            }
+        {% endfor %}
+
+        const labelsPizza = Object.keys(categoriasContagem);
+        const valoresPizza = Object.values(categoriasContagem);
+
+        const ctxPizza = document.getElementById('graficoPizza').getContext('2d');
+        new Chart(ctxPizza, {
+            type: 'doughnut',
+            data: {
+                labels: labelsPizza.length ? labelsPizza : ['Sem Gastos'],
+                datasets: [{
+                    data: valoresPizza.length ? valoresPizza : [1],
+                    backgroundColor: ['#ff6b6b', '#4ed17f', '#ffbe53', '#74b9ff', '#a29bfe', '#dfe6e9']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+
+        // 4. CONFIGURAÇÃO DO NOVO GRÁFICO DE COMPARAÇÃO
+        const ctxComp = document.getElementById('graficoComparacao').getContext('2d');
+        new Chart(ctxComp, {
+            type: 'bar',
+            data: {
+                labels: ['Ganhos (Entradas)', 'Gastos (Saídas)'],
+                datasets: [
+                    {
+                        label: 'Mês Anterior',
+                        data: [{{ entradas_anterior }}, {{ saidas_anterior }}],
+                        backgroundColor: '#a4b0be',
+                        borderRadius: 5
+                    },
+                    {
+                        label: 'Mês Atual',
+                        data: [{{ total_entradas }}, {{ total_saidas }}],
+                        backgroundColor: '#007bff',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Service Worker do App
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+</body>
+</html>

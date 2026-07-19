@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Cadastro - Controle Financeiro</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-body">
+    <div class="login-box animate-fade">
+        <h2>Criar Nova Conta</h2>
+        
+        {% if erro %}
+            <p style="color: #ff4757; font-weight: bold; margin-bottom: 10px;">{{ erro }}</p>
+        {% endif %}
+        
+        {% if sucesso %}
+            <p style="color: #28a745; font-weight: bold; margin-bottom: 10px;">{{ sucesso }}</p>
+            <a href="/login" class="btn-login" style="display: block; text-decoration: none; margin-top: 10px; line-height: 40px;">Ir para o Login</a>
+        {% else %}
+            <form method="POST">
+                <input type="text" name="usuario" placeholder="Escolha um nome de usuário" required>
+                <input type="password" name="senha" placeholder="Crie uma senha" required>
+                <button type="submit" class="btn-login" style="background: #28a745;">Cadastrar</button>
+            </form>
+            <p style="margin-top: 15px; font-size: 14px;">
+                Já possui conta? <a href="/login" style="color: #007bff; text-decoration: none; font-weight: bold;">Faça Login</a>
+            </p>
+        {% endif %}
+    </div>
+</body>
+</html>
