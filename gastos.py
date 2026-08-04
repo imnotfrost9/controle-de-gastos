@@ -8,33 +8,29 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# CHAVE DE SESSÃO SEGURA (Proteção contra roubo de cookies)
+# CHAVE DE SESSÃO SEGURA
 app.secret_key = 'K9#mP2$vL5@qX7*tY1!wR4%zZ0^cN'
 
-# ==========================================
-# CONFIGURAÇÃO DO BANCO DE DADOS (PostgreSQL / Supabase)
-# ==========================================
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def conectar_banco():
-    # Conecta ao Supabase usando a variável de ambiente segura
     conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def inicializar_banco():
     conn = conectar_banco()
-    # O RealDictCursor faz o Postgres devolver os dados em formato de dicionário
-    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
-    # Cria a tabela de usuários (se não existir)
-    c.execute('''
+    # Cria a tabela de usuários
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
             senha TEXT NOT NULL
         )
     ''')
-    # Cria a tabela de gastos (se não existir)
-    c.execute('''
+    
+    # Cria a tabela de gastos
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS gastos (
             id TEXT PRIMARY KEY,
             usuario TEXT NOT NULL,
@@ -47,35 +43,28 @@ def inicializar_banco():
         )
     ''')
     conn.commit()
-    c.close()
+    cur.close()
     conn.close()
 
-# Roda a função para garantir que o banco existe assim que o código liga
 if DATABASE_URL:
     inicializar_banco()
 
 
-# ==========================================
-# ROTAS DE AUTENTICAÇÃO (LOGIN E CADASTRO)
-# ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        usuario = request.form['usuario'].lower() # Transforma em minúsculo para evitar erros
+        usuario = request.form['usuario'].lower().strip()
         senha = request.form['senha']
         
         conn = conectar_banco()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        
-        # Busca o usuário no banco de dados (usando %s no lugar de ?)
         cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
         user_db = cur.fetchone()
-        
         cur.close()
         conn.close()
         
-        # VERIFICAÇÃO DE SENHA CRIPTOGRAFADA
         if user_db and check_password_hash(user_db['senha'], senha):
+            session.clear()
             session['usuario'] = usuario
             return redirect(url_for('index'))
         else:
@@ -86,12 +75,11 @@ def login():
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
     if request.method == 'POST':
-        usuario = request.form['usuario'].lower()
+        usuario = request.form['usuario'].lower().strip()
         senha = request.form['senha']
         
         conn = conectar_banco()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        
         cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
         user_db = cur.fetchone()
         
@@ -100,7 +88,6 @@ def cadastro():
             conn.close()
             return render_template('cadastro.html', erro="Este usuário já existe.")
         
-        # CRIPTOGRAFANDO A SENHA ANTES DE SALVAR
         senha_criptografada = generate_password_hash(senha)
         
         cur.execute('INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)', (usuario, senha_criptografada))
@@ -115,13 +102,10 @@ def cadastro():
 
 @app.route('/sair')
 def sair():
-    session.pop('usuario', None)
+    session.clear()
     return redirect(url_for('login'))
 
 
-# ==========================================
-# ROTA PRINCIPAL (DASHBOARD E GRÁFICOS)
-# ==========================================
 @app.route('/')
 def index():
     if 'usuario' not in session:
@@ -129,7 +113,6 @@ def index():
     
     usuario_atual = session['usuario']
     
-    # Busca os gastos apenas do usuário logado
     conn = conectar_banco()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute('SELECT * FROM gastos WHERE usuario = %s', (usuario_atual,))
@@ -138,7 +121,6 @@ def index():
     cur.close()
     conn.close()
     
-    # Mantém a lógica transformando os dados do banco em uma lista de dicionários
     dados = [dict(gasto) for gasto in gastos_db]
     
     mes_atual = int(request.args.get('mes', datetime.datetime.now().month))
@@ -180,9 +162,6 @@ def index():
                            nome_mes_atual=nome_mes_atual)
 
 
-# ==========================================
-# ROTAS DE AÇÕES (ADICIONAR E DELETAR)
-# ==========================================
 @app.route('/adicionar', methods=['POST'])
 def adicionar():
     if 'usuario' not in session:
@@ -205,7 +184,6 @@ def adicionar():
         
     novo_id = str(uuid.uuid4())
     
-    # Salva diretamente no banco de dados Supabase
     conn = conectar_banco()
     cur = conn.cursor()
     cur.execute('''
@@ -228,7 +206,6 @@ def deletar(id_item):
     mes = request.args.get('mes', datetime.datetime.now().month)
     ano = request.args.get('ano', datetime.datetime.now().year)
     
-    # Apaga do banco de dados garantindo que o usuário só apaga os próprios gastos
     conn = conectar_banco()
     cur = conn.cursor()
     cur.execute('DELETE FROM gastos WHERE id = %s AND usuario = %s', (id_item, usuario_atual))
@@ -240,8 +217,5 @@ def deletar(id_item):
     return redirect(url_for('index', mes=mes, ano=ano))
 
 
-# ==========================================
-# INICIALIZAÇÃO DO SERVIDOR (CONFIGURADO PARA GUNICORN/RENDER)
-# ==========================================
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0')
