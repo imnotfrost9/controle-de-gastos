@@ -8,9 +8,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta_super_segura'
 
-# Configuração para aceitar qualquer Host/Proxy do Render sem dar Bad Request
-app.config['PREFERRED_URL_SCHEME'] = 'https'
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Configuração rigorosa para aceitar o proxy do Render e ignorar restrições de host
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1
+)
 
 def conectar_banco():
     database_url = os.environ.get('DATABASE_URL')
