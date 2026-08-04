@@ -1,250 +1,183 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Controle Financeiro</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" href="/static/icon.png" type="image/png">
-    <link rel="manifest" href="/static/manifest.json">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Controle de Gastos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .profile-img { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 2px solid #dee2e6; cursor: pointer; }
+    </style>
 </head>
-<body class="animate-fade">
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="fas fa-wallet me-2"></i>Controle de Gastos</a>
+            <div class="d-flex align-items-center text-white">
+                <img src="{{ foto_usuario }}" alt="Foto de Perfil" class="profile-img me-2" data-bs-toggle="modal" data-bs-target="#modalFoto" title="Clique para alterar a foto">
+                <span class="me-3">Olá, <strong>{{ usuario_atual }}</strong></span>
+                <a href="/sair" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Sair</a>
+            </div>
+        </div>
+    </nav>
 
     <div class="container">
-        <header>
-            <h1 style="display: flex; align-items: center; gap: 10px;">
-                <img src="https://api.dicebear.com/8.x/fun-emoji/svg?seed={{ usuario_atual }}" alt="Avatar" width="45" height="45" style="border-radius: 50%; background: #e0e0e0; padding: 2px;">
-                {{ usuario_atual }}
-            </h1>
-            <div class="header-botoes">
-                <button id="btn-olho" class="btn-tema" title="Esconder/Mostrar Valores">
-                    <i id="icone-olho" class="ph-fill ph-eye"></i>
-                </button>
-                <button id="btn-tema" class="btn-tema"><i class="ph-fill ph-moon"></i></button>
-                <a href="/sair" class="btn-sair"><i class="ph ph-sign-out"></i> Sair</a>
-            </div>
-        </header>
-
-        <div class="navegacao-mes">
-            <a href="/?mes={{ 12 if mes_atual == 1 else mes_atual - 1 }}&ano={{ ano_atual - 1 if mes_atual == 1 else ano_atual }}" class="btn-mes">
-                <i class="ph ph-caret-left"></i> Anterior
-            </a>
-            
-            <h2>{{ nome_mes_atual }}<br><span style="font-size: 0.8em; color: #a4b0be;">{{ ano_atual }}</span></h2>
-            
-            <a href="/?mes={{ 1 if mes_atual == 12 else mes_atual + 1 }}&ano={{ ano_atual + 1 if mes_atual == 12 else ano_atual }}" class="btn-mes">
-                Próximo <i class="ph ph-caret-right"></i>
-            </a>
-        </div>
-
-        <div class="painel">
-            <div class="card card-saldo">
-                <p>Saldo Geral do Mês</p>
-                <h2 id="saldo-geral" class="valor-monetario {% if saldo_total >= 0 %}texto-positivo{% else %}texto-negativo{% endif %}" data-valor="R$ {{ '%.2f'|format(saldo_total) }}">
-                    R$ {{ '%.2f'|format(saldo_total) }}
-                </h2>
-            </div>
-            <div class="resumo">
-                <div class="card card-entrada">
-                    <p>Entradas</p>
-                    <h3 id="saldo-entrada" class="valor-monetario texto-positivo" data-valor="R$ {{ '%.2f'|format(total_entradas) }}">
-                        R$ {{ '%.2f'|format(total_entradas) }}
-                    </h3>
+        <!-- Cards de Resumo -->
+        <div class="row text-center mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card p-3 bg-success text-white">
+                    <h5>Entradas</h5>
+                    <h3>R$ {{ "%.2f"|format(total_entradas) }}</h3>
                 </div>
-                <div class="card card-saida">
-                    <p>Saídas</p>
-                    <h3 id="saldo-saida" class="valor-monetario texto-negativo" data-valor="R$ {{ '%.2f'|format(total_saidas) }}">
-                        R$ {{ '%.2f'|format(total_saidas) }}
-                    </h3>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card p-3 bg-danger text-white">
+                    <h5>Saídas</h5>
+                    <h3>R$ {{ "%.2f"|format(total_saidas) }}</h3>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card p-3 {% if saldo_total >= 0 %}bg-primary{% else %}bg-warning text-dark{% endif %} text-white">
+                    <h5>Saldo</h5>
+                    <h3>R$ {{ "%.2f"|format(saldo_total) }}</h3>
                 </div>
             </div>
         </div>
 
-        <div class="linha-dupla">
-            <div class="box-metade">
-                <h3><i class="ph ph-plus-circle"></i> Novo Registro</h3>
-                <form action="/adicionar" method="POST">
-                    <input type="hidden" name="mes" value="{{ mes_atual }}">
-                    <input type="hidden" name="ano" value="{{ ano_atual }}">
-                    
-                    <input type="text" name="descricao" placeholder="Ex: Mercantil, Uber, Luz" required>
-                    <input type="text" name="valor" placeholder="Valor (Ex: 50.00)" required>
-                    
-                    <div class="radios">
-                        <label class="radio-entrada"><input type="radio" name="tipo" value="entrada" checked> Ganho</label>
-                        <label class="radio-saida"><input type="radio" name="tipo" value="saida"> Gasto</label>
+        <!-- Seletor de Meses -->
+        <div class="card p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h4 class="mb-0 text-secondary"><i class="fas fa-calendar-alt me-2"></i>{{ nome_mes_atual }} de {{ ano_atual }}</h4>
+                <div class="btn-group mt-2 mt-md-0">
+                    {% set meses = [(1, "Jan"), (2, "Fev"), (3, "Mar"), (4, "Abr"), (5, "Mai"), (6, "Jun"), (7, "Jul"), (8, "Ago"), (9, "Set"), (10, "Out"), (11, "Nov"), (12, "Dez")] %}
+                    {% for m_num, m_nome in meses %}
+                        <a href="/?mes={{ m_num }}&ano={{ ano_atual }}" class="btn btn-outline-secondary {% if mes_atual == m_num %}active{% endif %}">{{ m_nome }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Formulário para Adicionar Transação -->
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h5 class="mb-3 text-secondary"><i class="fas fa-plus-circle me-2"></i>Nova Transação</h5>
+                    <form action="/adicionar" method="POST">
+                        <input type="hidden" name="mes" value="{{ mes_atual }}">
+                        <input type="hidden" name="ano" value="{{ ano_atual }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Descrição</label>
+                            <input type="text" class="form-control" name="descricao" required placeholder="Ex: Supermercado">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="text" class="form-control" name="valor" required placeholder="0.00">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" name="tipo">
+                                <option value="saida">Saída (Gasto)</option>
+                                <option value="entrada">Entrada (Receita)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoria</label>
+                            <select class="form-select" name="categoria">
+                                <option value="Alimentação / Mercado">Alimentação / Mercado</option>
+                                <option value="Farmácia / Saúde">Farmácia / Saúde</option>
+                                <option value="Moradia">Moradia</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Lazer">Lazer</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Forma de Pagamento</label>
+                            <select class="form-select" name="pagamento">
+                                <option value="PIX">PIX</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Boleto">Boleto</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i> Adicionar</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabela de Transações -->
+            <div class="col-md-8">
+                <div class="card p-4">
+                    <h5 class="mb-3 text-secondary"><i class="fas fa-list me-2"></i>Histórico do Mês</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in dados %}
+                                <tr>
+                                    <td>{{ item['data'] }}</td>
+                                    <td>{{ item['descricao'] }}</td>
+                                    <td><span class="badge bg-secondary">{{ item['categoria'] }}</span></td>
+                                    <td><span class="badge bg-info text-dark">{{ item['pagamento'] }}</span></td>
+                                    <td class="fw-bold {% if item['tipo'] == 'entrada' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if item['tipo'] == 'entrada' %}+{% else %}-{% endif %} R$ {{ "%.2f"|format(item['valor']) }}
+                                    </td>
+                                    <td>
+                                        <a href="/deletar/{{ item['id'] }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir?')"><i class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Nenhuma transação registrada neste mês.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <select name="categoria" class="select-categoria">
-                        <option value="Alimentação">🍔 Alimentação</option>
-                        <option value="Transporte">🚗 Transporte</option>
-                        <option value="Lazer">🍿 Lazer</option>
-                        <option value="Moradia">🏠 Moradia</option>
-                        <option value="Outros">💼 Outros</option>
-                    </select>
-
-                    <label class="checkbox-fixo">
-                        <input type="checkbox" name="fixo" value="sim"> Marcar como Gasto Fixo
-                    </label>
-
-                    <button type="submit" class="btn-salvar">Salvar Registro</button>
+    <!-- Modal para alterar foto de perfil -->
+    <div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/atualizar_foto" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Alterar Foto de Perfil</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Link da Imagem (URL)</label>
+                            <input type="url" class="form-control" name="foto_url" placeholder="https://exemplo.com/sua-foto.jpg" required>
+                            <div class="form-text">Cole o link direto de uma imagem da internet para usar como seu avatar.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Foto</button>
+                    </div>
                 </form>
             </div>
-
-            <div class="box-metade grafico-box">
-                <h3><i class="ph ph-chart-pie"></i> Divisão de Gastos</h3>
-                <div class="tamanho-grafico">
-                    <canvas id="graficoPizza"></canvas>
-                </div>
-            </div>
         </div>
-
-        <div class="linha-dupla">
-            <div class="box-metade" style="min-height: 280px;">
-                <h3><i class="ph ph-chart-bar"></i> Comparativo: Mês Anterior vs Mês Atual</h3>
-                <div style="position: relative; height: 200px; width: 100%;">
-                    <canvas id="graficoComparacao"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <h3><i class="ph ph-clock-history"></i> Histórico do Mês</h3>
-        <ul class="lista-historico">
-            {% for item in dados %}
-            <li class="item-{{ item.tipo }}">
-                <div class="item-info">
-                    <strong>{{ item.descricao }} <span class="badge-cat">{{ item.categoria }}</span></strong>
-                    <small>{{ item.data }} {% if item.fixo == 'sim' %} 📌 [Fixo] {% endif %}</small>
-                </div>
-                <div class="item-valor">
-                    <span class="valor-monetario" data-valor="{% if item.tipo == 'saida' %}-{% endif %}R$ {{ '%.2f'|format(item.valor) }}">
-                        {% if item.tipo == 'saida' %}-{% endif %}R$ {{ '%.2f'|format(item.valor) }}
-                    </span>
-                    <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-apagar" title="Apagar"><i class="ph ph-trash"></i></a>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
     </div>
 
-    <div class="menu-mobile">
-        <a href="/"><i class="ph ph-house"></i>Início</a>
-        <a href="#" onclick="document.querySelector('form input[name=descricao]').focus();"><i class="ph ph-plus-circle"></i>Adicionar</a>
-        <a href="/sair"><i class="ph ph-sign-out"></i>Sair</a>
-    </div>
-
-    <script>
-        // 1. SCRIPT DO MODO ESCURO
-        const btnTema = document.getElementById('btn-tema');
-        const body = document.body;
-        if(localStorage.getItem('tema') === 'escuro') {
-            body.classList.add('tema-escuro');
-            btnTema.innerHTML = '<i class="ph-fill ph-sun"></i>';
-        }
-        btnTema.addEventListener('click', () => {
-            body.classList.toggle('tema-escuro');
-            if(body.classList.contains('tema-escuro')) {
-                localStorage.setItem('tema', 'escuro');
-                btnTema.innerHTML = '<i class="ph-fill ph-sun"></i>';
-            } else {
-                localStorage.setItem('tema', 'claro');
-                btnTema.innerHTML = '<i class="ph-fill ph-moon"></i>';
-            }
-        });
-
-        // 2. SCRIPT DO MODO OLHINHO (PRIVACIDADE)
-        const btnOlho = document.getElementById('btn-olho');
-        const iconeOlho = document.getElementById('icone-olho');
-        let oculto = localStorage.getItem('valoresOcultos') === 'sim';
-
-        function aplicarOcultacao() {
-            const saldos = document.querySelectorAll('.valor-monetario');
-            saldos.forEach(el => {
-                if (oculto) {
-                    el.innerText = "R$ ••••";
-                } else {
-                    el.innerText = el.getAttribute('data-valor');
-                }
-            });
-            if (oculto) {
-                iconeOlho.className = "ph-fill ph-eye-slash";
-            } else {
-                iconeOlho.className = "ph-fill ph-eye";
-            }
-        }
-
-        btnOlho.addEventListener('click', () => {
-            oculto = !oculto;
-            localStorage.setItem('valoresOcultos', oculto ? 'sim' : 'nao');
-            aplicarOcultacao();
-        });
-        // Roda ao carregar a página para lembrar a última escolha
-        aplicarOcultacao();
-
-
-        // 3. CONFIGURAÇÃO DO GRÁFICO DE PIZZA (CATEGORIAS)
-        const categoriasContagem = {};
-        {% for item in dados %}
-            if ("{{item.tipo}}" === "saida") {
-                categoriasContagem["{{item.categoria}}"] = (categoriasContagem["{{item.categoria}}"] || 0) + {{item.valor}};
-            }
-        {% endfor %}
-
-        const labelsPizza = Object.keys(categoriasContagem);
-        const valoresPizza = Object.values(categoriasContagem);
-
-        const ctxPizza = document.getElementById('graficoPizza').getContext('2d');
-        new Chart(ctxPizza, {
-            type: 'doughnut',
-            data: {
-                labels: labelsPizza.length ? labelsPizza : ['Sem Gastos'],
-                datasets: [{
-                    data: valoresPizza.length ? valoresPizza : [1],
-                    backgroundColor: ['#ff6b6b', '#4ed17f', '#ffbe53', '#74b9ff', '#a29bfe', '#dfe6e9']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-
-        // 4. CONFIGURAÇÃO DO NOVO GRÁFICO DE COMPARAÇÃO
-        const ctxComp = document.getElementById('graficoComparacao').getContext('2d');
-        new Chart(ctxComp, {
-            type: 'bar',
-            data: {
-                labels: ['Ganhos (Entradas)', 'Gastos (Saídas)'],
-                datasets: [
-                    {
-                        label: 'Mês Anterior',
-                        data: [{{ entradas_anterior }}, {{ saidas_anterior }}],
-                        backgroundColor: '#a4b0be',
-                        borderRadius: 5
-                    },
-                    {
-                        label: 'Mês Atual',
-                        data: [{{ total_entradas }}, {{ total_saidas }}],
-                        backgroundColor: '#007bff',
-                        borderRadius: 5
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Service Worker do App
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js');
-        }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
