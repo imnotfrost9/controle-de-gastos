@@ -8,7 +8,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta_super_segura'
 
-# Configuração rigorosa para aceitar o proxy do Render e ignorar restrições de host
+# Configuração rigorosa para aceitar o proxy do Render
 app.wsgi_app = ProxyFix(
     app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1
 )
@@ -53,6 +53,10 @@ MESES_NOME = {
     5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
 }
+
+@app.before_request
+def log_request_info():
+    print(f"REQ RECEBIDA: {request.method} {request.path}")
 
 @app.route('/')
 def index():
