@@ -58,6 +58,10 @@ MESES_NOME = {
 def log_request_info():
     print(f"REQ RECEBIDA: {request.method} {request.path}")
 
+@app.route('/healthz')
+def healthz():
+    return "OK", 200
+
 @app.route('/')
 def index():
     if 'usuario_id' not in session:
