@@ -1,251 +1,218 @@
 import os
-import datetime
-import uuid
+from flask import Flask, render_template, request, redirect, url_for, session
 import psycopg2
 import psycopg2.extras
-from flask import Flask, render_template, request, redirect, url_for, session
-from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 app = Flask(__name__)
-
-# CHAVE DE SESSÃO SEGURA
-app.secret_key = 'K9#mP2$vL5@qX7*tY1!wR4%zZ0^cN'
-
-DATABASE_URL = os.environ.get('DATABASE_URL')
+app.secret_key = 'sua_chave_secreta_super_segura'
 
 def conectar_banco():
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        raise ValueError("A variável de ambiente DATABASE_URL não está configurada!")
+    return psycopg2.connect(database_url, cursor_factory=psycopg2.extras.DictCursor)
 
 def inicializar_banco():
     conn = conectar_banco()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-    # Cria a tabela de usuários com suporte a foto de perfil
-    cur.execute('''
+    cur = conn.cursor()
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
-            usuario TEXT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
             senha TEXT NOT NULL,
-            foto TEXT
+            foto_url TEXT
         )
-    ''')
-    
-    # Cria a tabela de gastos
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS gastos (
-            id TEXT PRIMARY KEY,
-            usuario TEXT NOT NULL,
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS transacoes (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER REFERENCES usuarios(id),
             descricao TEXT NOT NULL,
-            valor REAL NOT NULL,
+            valor NUMERIC(10,2) NOT NULL,
             tipo TEXT NOT NULL,
-            categoria TEXT NOT NULL,
-            pagamento TEXT,
-            data TEXT NOT NULL,
-            fixo TEXT
+            categoria TEXT DEFAULT 'Outros',
+            pagamento TEXT DEFAULT 'PIX',
+            data DATE NOT NULL
         )
-    ''')
+    """)
     conn.commit()
     cur.close()
     conn.close()
 
-if DATABASE_URL:
-    inicializar_banco()
+inicializar_banco()
 
+MESES_NOME = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+}
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        usuario = request.form['usuario'].lower().strip()
-        senha = request.form['senha']
-        
-        conn = conectar_banco()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
-        user_db = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if user_db and check_password_hash(user_db['senha'], senha):
-            session.clear()
-            session['usuario'] = usuario
-            return redirect(url_for('index'))
-        else:
-            return render_template('login.html', erro="Usuário ou senha incorretos.")
-            
-    return render_template('login.html')
-
-@app.route('/cadastro', methods=['GET', 'POST'])
-def cadastro():
-    if request.method == 'POST':
-        usuario = request.form['usuario'].lower().strip()
-        senha = request.form['senha']
-        
-        conn = conectar_banco()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
-        user_db = cur.fetchone()
-        
-        if user_db:
-            cur.close()
-            conn.close()
-            return render_template('cadastro.html', erro="Este usuário já existe.")
-        
-        senha_criptografada = generate_password_hash(senha)
-        
-        # Insere usuário novo com foto vazia padrão
-        cur.execute('INSERT INTO usuarios (usuario, senha, foto) VALUES (%s, %s, %s)', 
-                    (usuario, senha_criptografada, 'https://cdn-icons-png.flaticon.com/512/149/149071.png'))
-        conn.commit()
-        
-        cur.close()
-        conn.close()
-        
-        return render_template('cadastro.html', sucesso="Conta criada com sucesso! Faça o login.")
-        
-    return render_template('cadastro.html')
-
-@app.route('/atualizar_foto', methods=['POST'])
-def atualizar_foto():
-    if 'usuario' not in session:
+@app.route('/')
+def index():
+    if 'usuario_id' not in session:
         return redirect(url_for('login'))
-        
-    usuario_atual = session['usuario']
-    nova_foto = request.form.get('foto_url')
+
+    usuario_id = session['usuario_id']
+    usuario_atual = session['username']
     
     conn = conectar_banco()
     cur = conn.cursor()
-    cur.execute('UPDATE usuarios SET foto = %s WHERE usuario = %s', (nova_foto, usuario_atual))
+    cur.execute("SELECT foto_url FROM usuarios WHERE id = %s", (usuario_id,))
+    res_user = cur.fetchone()
+    foto_usuario = res_user['foto_url'] if res_user and res_user['foto_url'] else 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+
+    hoje = datetime.today()
+    mes_atual = request.args.get('mes', default=hoje.month, type=int)
+    ano_atual = request.args.get('ano', default=hoje.year, type=int)
+    nome_mes_atual = MESES_NOME.get(mes_atual, "Mês")
+
+    cur.execute("""
+        SELECT id, descricao, valor, tipo, categoria, pagamento, TO_CHAR(data, 'DD/MM/YYYY') as data 
+        FROM transacoes 
+        WHERE usuario_id = %s AND EXTRACT(MONTH FROM data) = %s AND EXTRACT(YEAR FROM data) = %s
+        ORDER BY data DESC, id DESC
+    """, (usuario_id, mes_atual, ano_atual))
+    dados = cur.fetchall()
+
+    total_entradas = sum(item['valor'] for item in dados if item['tipo'] == 'entrada')
+    total_saidas = sum(item['valor'] for item in dados if item['tipo'] == 'saida')
+    saldo_total = total_entradas - total_saidas
+
+    cur.close()
+    conn.close()
+
+    return render_template('index.html', 
+                           dados=dados, 
+                           total_entradas=total_entradas, 
+                           total_saidas=total_saidas, 
+                           saldo_total=saldo_total,
+                           mes_atual=mes_atual,
+                           ano_atual=ano_atual,
+                           nome_mes_atual=nome_mes_atual,
+                           usuario_atual=usuario_atual,
+                           foto_usuario=foto_usuario)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    erro = None
+    if request.method == 'POST':
+        username = request.form['username']
+        senha = request.form['senha']
+
+        conn = conectar_banco()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM usuarios WHERE username = %s AND senha = %s", (username, senha))
+        usuario = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if usuario:
+            session['usuario_id'] = usuario['id']
+            session['username'] = usuario['username']
+            return redirect(url_for('index'))
+        else:
+            erro = "Usuário ou senha incorretos."
+
+    return render_template('login.html', erro=erro)
+
+@app.route('/cadastro', methods=['GET', 'POST'])
+def cadastro():
+    erro = None
+    sucesso = None
+    if request.method == 'POST':
+        username = request.form['username']
+        senha = request.form['senha']
+
+        conn = conectar_banco()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
+        existing_user = cur.fetchone()
+
+        if existing_user:
+            erro = "Este nome de usuário já existe. Escolha outro."
+        else:
+            cur.execute("INSERT INTO usuarios (username, senha) VALUES (%s, %s)", (username, senha))
+            conn.commit()
+            sucesso = "Cadastro realizado com sucesso! Faça login."
+        
+        cur.close()
+        conn.close()
+
+    return render_template('cadastro.html', erro=erro, sucesso=sucesso)
+
+@app.route('/adicionar', methods=['POST'])
+def adicionar():
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    usuario_id = session['usuario_id']
+    descricao = request.form['descricao']
+    valor_str = request.form['valor'].replace(',', '.')
+    valor = float(valor_str)
+    tipo = request.form['tipo']
+    categoria = request.form.get('categoria', 'Outros')
+    pagamento = request.form.get('pagamento', 'PIX')
+    
+    mes = request.form.get('mes', datetime.today().month, type=int)
+    ano = request.form.get('ano', datetime.today().year, type=int)
+    
+    hoje = datetime.today()
+    if mes == hoje.month and ano == hoje.year:
+        data_transacao = hoje.date()
+    else:
+        data_transacao = datetime(ano, mes, 1).date()
+
+    conn = conectar_banco()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO transacoes (usuario_id, descricao, valor, tipo, categoria, pagamento, data) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (usuario_id, descricao, valor, tipo, categoria, pagamento, data_transacao))
     conn.commit()
     cur.close()
     conn.close()
-    
+
+    return redirect(url_for('index', mes=mes, ano=ano))
+
+@app.route('/atualizar_foto', methods=['POST'])
+def atualizar_foto():
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    usuario_id = session['usuario_id']
+    foto_url = request.form['foto_url']
+
+    conn = conectar_banco()
+    cur = conn.cursor()
+    cur.execute("UPDATE usuarios SET foto_url = %s WHERE id = %s", (foto_url, usuario_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
     return redirect(url_for('index'))
+
+@app.route('/deletar/<int:id>')
+def deletar(id):
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    mes = request.args.get('mes', datetime.today().month, type=int)
+    ano = request.args.get('ano', datetime.today().year, type=int)
+
+    conn = conectar_banco()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM transacoes WHERE id = %s AND usuario_id = %s", (id, session['usuario_id']))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return redirect(url_for('index', mes=mes, ano=ano))
 
 @app.route('/sair')
 def sair():
     session.clear()
     return redirect(url_for('login'))
 
-
-@app.route('/')
-def index():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-    
-    usuario_atual = session['usuario']
-    
-    conn = conectar_banco()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    
-    # Busca dados do usuário (incluindo a foto)
-    cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario_atual,))
-    user_data = cur.fetchone()
-    foto_usuario = user_data['foto'] if user_data and user_data['foto'] else 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
-    
-    # Busca os gastos
-    cur.execute('SELECT * FROM gastos WHERE usuario = %s', (usuario_atual,))
-    gastos_db = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    
-    dados = [dict(gasto) for gasto in gastos_db]
-    
-    mes_atual = int(request.args.get('mes', datetime.datetime.now().month))
-    ano_atual = int(request.args.get('ano', datetime.datetime.now().year))
-    
-    if mes_atual == 1:
-        mes_anterior = 12
-        ano_anterior = ano_atual - 1
-    else:
-        mes_anterior = mes_atual - 1
-        ano_anterior = ano_atual
-
-    sufixo_atual = f"/{mes_atual:02d}/{ano_atual}"
-    sufixo_anterior = f"/{mes_anterior:02d}/{ano_anterior}"
-    
-    dados_atual = [d for d in dados if sufixo_atual in d.get('data', '')]
-    total_entradas = sum(item['valor'] for item in dados_atual if item['tipo'] == 'entrada')
-    total_saidas = sum(item['valor'] for item in dados_atual if item['tipo'] == 'saida')
-    saldo_total = total_entradas - total_saidas
-    
-    dados_anterior = [d for d in dados if sufixo_anterior in d.get('data', '')]
-    entradas_anterior = sum(item['valor'] for item in dados_anterior if item['tipo'] == 'entrada')
-    saidas_anterior = sum(item['valor'] for item in dados_anterior if item['tipo'] == 'saida')
-    
-    meses_nomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
-                   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-    nome_mes_atual = meses_nomes[mes_atual - 1]
-    
-    return render_template('index.html',
-                           usuario_atual=usuario_atual,
-                           foto_usuario=foto_usuario,
-                           dados=dados_atual,
-                           total_entradas=total_entradas,
-                           total_saidas=total_saidas,
-                           saldo_total=saldo_total,
-                           entradas_anterior=entradas_anterior,
-                           saidas_anterior=saidas_anterior,
-                           mes_atual=mes_atual,
-                           ano_atual=ano_atual,
-                           nome_mes_atual=nome_mes_atual)
-
-
-@app.route('/adicionar', methods=['POST'])
-def adicionar():
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-        
-    usuario_atual = session['usuario']
-    descricao = request.form['descricao']
-    valor = float(request.form['valor'].replace(',', '.'))
-    tipo = request.form['tipo']
-    categoria = request.form['categoria']
-    pagamento = request.form.get('pagamento', 'PIX')
-    fixo = request.form.get('fixo', 'nao')
-    
-    mes = int(request.form.get('mes', datetime.datetime.now().month))
-    ano = int(request.form.get('ano', datetime.datetime.now().year))
-    
-    if mes == datetime.datetime.now().month and ano == datetime.datetime.now().year:
-        data_registro = datetime.datetime.now().strftime("%d/%m/%Y")
-    else:
-        data_registro = f"01/{mes:02d}/{ano}"
-        
-    novo_id = str(uuid.uuid4())
-    
-    conn = conectar_banco()
-    cur = conn.cursor()
-    cur.execute('''
-        INSERT INTO gastos (id, usuario, descricao, valor, tipo, categoria, pagamento, data, fixo) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (novo_id, usuario_atual, descricao, valor, tipo, categoria, pagamento, data_registro, fixo))
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-    
-    return redirect(url_for('index', mes=mes, ano=ano))
-
-@app.route('/deletar/<id_item>')
-def deletar(id_item):
-    if 'usuario' not in session:
-        return redirect(url_for('login'))
-        
-    usuario_atual = session['usuario']
-    mes = request.args.get('mes', datetime.datetime.now().month)
-    ano = request.args.get('ano', datetime.datetime.now().year)
-    
-    conn = conectar_banco()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM gastos WHERE id = %s AND usuario = %s', (id_item, usuario_atual))
-    
-    conn.commit()
-    cur.close()
-    conn.close()
-    
-    return redirect(url_for('index', mes=mes, ano=ano))
-
-
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0')
+    app.run(debug=True)

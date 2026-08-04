@@ -3,239 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gastos</title>
-    <!-- Bootstrap CSS -->
+    <title>Controle de Gastos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#0d6efd">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .profile-img { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 2px solid #dee2e6; cursor: pointer; }
+    </style>
 </head>
-<body class="bg-light">
-
-    <!-- Barra Superior -->
+<body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#"><i class="fas fa-wallet me-2"></i>Controle Financeiro</a>
-            <div class="d-flex align-items-center">
-                <a href="/sair" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt me-1"></i>Sair</a>
+            <a class="navbar-brand" href="#"><i class="fas fa-wallet me-2"></i>Controle de Gastos</a>
+            <div class="d-flex align-items-center text-white">
+                <img src="{{ foto_usuario }}" alt="Foto de Perfil" class="profile-img me-2" data-bs-toggle="modal" data-bs-target="#modalFoto" title="Clique para alterar a foto">
+                <span class="me-3">Olá, <strong>{{ usuario_atual }}</strong></span>
+                <a href="/sair" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Sair</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
-
-        <!-- Exibição da Foto de Perfil no Topo -->
-        <div class="card shadow-sm p-3 mb-4 bg-white rounded">
-            <div class="d-flex align-items-center justify-content-between flex-wrap">
-                <div class="d-flex align-items-center">
-                    <img src="{{ foto_usuario }}" alt="Foto de Perfil" class="rounded-circle border shadow-sm" width="70" height="70" style="object-fit: cover;">
-                    <div class="ms-3">
-                        <h4 class="mb-0 text-dark fw-bold">Olá, {{ usuario_atual }}</h4>
-                        <p class="text-muted small mb-0">Bem-vindo(a) ao seu painel financeiro</p>
-                    </div>
-                </div>
-                <div class="mt-2 mt-md-0">
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFoto">
-                        <i class="fas fa-camera me-1"></i> Alterar Foto
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seletor de Mês e Ano -->
-        <div class="card shadow-sm p-3 mb-4 bg-white rounded">
-            <form method="GET" action="/" class="row g-3 align-items-center">
-                <div class="col-md-5">
-                    <label for="mes" class="form-label fw-bold">Mês:</label>
-                    <select class="form-select" id="mes" name="mes">
-                        <option value="1" {% if mes_atual == 1 %}selected{% endif %}>Janeiro</option>
-                        <option value="2" {% if mes_atual == 2 %}selected{% endif %}>Fevereiro</option>
-                        <option value="3" {% if mes_atual == 3 %}selected{% endif %}>Março</option>
-                        <option value="4" {% if mes_atual == 4 %}selected{% endif %}>Abril</option>
-                        <option value="5" {% if mes_atual == 5 %}selected{% endif %}>Maio</option>
-                        <option value="6" {% if mes_atual == 6 %}selected{% endif %}>Junho</option>
-                        <option value="7" {% if mes_atual == 7 %}selected{% endif %}>Julho</option>
-                        <option value="8" {% if mes_atual == 8 %}selected{% endif %}>Agosto</option>
-                        <option value="9" {% if mes_atual == 9 %}selected{% endif %}>Setembro</option>
-                        <option value="10" {% if mes_atual == 10 %}selected{% endif %}>Outubro</option>
-                        <option value="11" {% if mes_atual == 11 %}selected{% endif %}>Novembro</option>
-                        <option value="12" {% if mes_atual == 12 %}selected{% endif %}>Dezembro</option>
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <label for="ano" class="form-label fw-bold">Ano:</label>
-                    <input type="number" class="form-control" id="ano" name="ano" value="{{ ano_atual }}">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100 mt-2 mt-md-0"><i class="fas fa-filter me-1"></i> Filtrar</button>
-                </div>
-            </form>
-        </div>
-
         <!-- Cards de Resumo -->
         <div class="row text-center mb-4">
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-success bg-white text-success p-3">
-                    <h5>Entradas ({{ nome_mes_atual }})</h5>
-                    <h3>R$ {{ "%.2f" | format(total_entradas) }}</h3>
+                <div class="card p-3 bg-success text-white">
+                    <h5>Entradas</h5>
+                    <h3>R$ {{ "%.2f"|format(total_entradas) }}</h3>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-danger bg-white text-danger p-3">
-                    <h5>Saídas ({{ nome_mes_atual }})</h5>
-                    <h3>R$ {{ "%.2f" | format(total_saidas) }}</h3>
+                <div class="card p-3 bg-danger text-white">
+                    <h5>Saídas</h5>
+                    <h3>R$ {{ "%.2f"|format(total_saidas) }}</h3>
                 </div>
             </div>
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm {% if saldo_total >= 0 %}border-primary text-primary{% else %}border-warning text-warning{% endif %} bg-white p-3">
-                    <h5>Saldo do Mês</h5>
-                    <h3>R$ {{ "%.2f" | format(saldo_total) }}</h3>
+                <div class="card p-3 {% if saldo_total >= 0 %}bg-primary{% else %}bg-warning text-dark{% endif %} text-white">
+                    <h5>Saldo</h5>
+                    <h3>R$ {{ "%.2f"|format(saldo_total) }}</h3>
                 </div>
             </div>
         </div>
 
-        <!-- Botão para abrir o Modal de Adicionar Gasto -->
-        <div class="d-grid gap-2 mb-4">
-            <button class="btn btn-success btn-lg shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAdicionar">
-                <i class="fas fa-plus-circle me-2"></i> Adicionar Nova Transação
-            </button>
-        </div>
-
-        <!-- Tabela de Transações -->
-        <div class="card shadow-sm bg-white rounded p-3 mb-5">
-            <h4 class="mb-3 text-secondary">Extrato de {{ nome_mes_atual }} / {{ ano_atual }}</h4>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Data</th>
-                            <th>Descrição</th>
-                            <th>Categoria</th>
-                            <th>Pagamento</th>
-                            <th>Valor</th>
-                            <th>Tipo</th>
-                            <th class="text-center">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if dados %}
-                            {% for item in dados %}
-                            <tr>
-                                <td>{{ item.data }}</td>
-                                <td class="fw-bold">{{ item.descricao }}</td>
-                                <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
-                                <td><small class="text-muted"><i class="fas fa-wallet me-1"></i>{{ item.pagamento if item.pagamento else 'PIX' }}</small></td>
-                                <td class="{% if item.tipo == 'entrada' %}text-success{% else %}text-danger{% endif %} fw-bold">
-                                    {% if item.tipo == 'entrada' %}+{% else %}-{% endif %} R$ {{ "%.2f" | format(item.valor) }}
-                                </td>
-                                <td>
-                                    {% if item.tipo == 'entrada' %}
-                                        <span class="badge bg-success">Entrada</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Saída</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir este item?');">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Nenhuma transação registrada neste mês.</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+        <!-- Seletor de Meses -->
+        <div class="card p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h4 class="mb-0 text-secondary"><i class="fas fa-calendar-alt me-2"></i>{{ nome_mes_atual }} de {{ ano_atual }}</h4>
+                <div class="btn-group mt-2 mt-md-0">
+                    {% set meses = [(1, "Jan"), (2, "Fev"), (3, "Mar"), (4, "Abr"), (5, "Mai"), (6, "Jun"), (7, "Jul"), (8, "Ago"), (9, "Set"), (10, "Out"), (11, "Nov"), (12, "Dez")] %}
+                    {% for m_num, m_nome in meses %}
+                        <a href="/?mes={{ m_num }}&ano={{ ano_atual }}" class="btn btn-outline-secondary {% if mes_atual == m_num %}active{% endif %}">{{ m_nome }}</a>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
-    </div>
-
-    <!-- Modal: Adicionar Transação -->
-    <div class="modal fade" id="modalAdicionar" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="/adicionar" method="POST">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Nova Transação</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
+        <div class="row">
+            <!-- Formulário para Adicionar Transação -->
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h5 class="mb-3 text-secondary"><i class="fas fa-plus-circle me-2"></i>Nova Transação</h5>
+                    <form action="/adicionar" method="POST">
                         <input type="hidden" name="mes" value="{{ mes_atual }}">
                         <input type="hidden" name="ano" value="{{ ano_atual }}">
-
+                        
                         <div class="mb-3">
-                            <label for="descricao" class="form-label">Descrição</label>
-                            <input type="text" class="form-control" id="descricao" name="descricao" placeholder="Ex: Supermercado, Conta de luz, Salário..." required>
+                            <label class="form-label">Descrição</label>
+                            <input type="text" class="form-control" name="descricao" required placeholder="Ex: Supermercado">
                         </div>
-
                         <div class="mb-3">
-                            <label for="valor" class="form-label">Valor (R$)</label>
-                            <input type="text" class="form-control" id="valor" name="valor" placeholder="Ex: 150,50" required>
+                            <label class="form-label">Valor (R$)</label>
+                            <input type="text" class="form-control" name="valor" required placeholder="0.00">
                         </div>
-
                         <div class="mb-3">
-                            <label for="tipo" class="form-label">Tipo de Movimentação</label>
-                            <select class="form-select" id="tipo" name="tipo" required>
-                                <option value="saida">🔴 Saída (Gasto / Despesa)</option>
-                                <option value="entrada">🟢 Entrada (Receita / Salário)</option>
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" name="tipo">
+                                <option value="saida">Saída (Gasto)</option>
+                                <option value="entrada">Entrada (Receita)</option>
                             </select>
                         </div>
-
-                        <!-- Categorias com as opções mais usadas -->
                         <div class="mb-3">
-                            <label for="categoria" class="form-label">Categoria</label>
-                            <select class="form-select" id="categoria" name="categoria" required>
-                                <option value="Alimentação / Mercado">🛒 Alimentação / Mercado</option>
-                                <option value="Saúde / Remédios">💊 Saúde / Remédios</option>
-                                <option value="Moradia / Contas">🏠 Moradia / Contas (Água, Luz, Aluguel)</option>
-                                <option value="Transporte">🚗 Transporte / Combustível</option>
-                                <option value="Lazer / Passeios">🎉 Lazer / Passeios</option>
-                                <option value="Outros">📦 Outros</option>
+                            <label class="form-label">Categoria</label>
+                            <select class="form-select" name="categoria">
+                                <option value="Alimentação / Mercado">Alimentação / Mercado</option>
+                                <option value="Farmácia / Saúde">Farmácia / Saúde</option>
+                                <option value="Moradia">Moradia</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Lazer">Lazer</option>
+                                <option value="Outros">Outros</option>
                             </select>
                         </div>
-
-                        <!-- Formas de Pagamento -->
                         <div class="mb-3">
-                            <label for="pagamento" class="form-label">Forma de Pagamento</label>
-                            <select class="form-select" id="pagamento" name="pagamento">
-                                <option value="PIX">⚡ PIX</option>
-                                <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
-                                <option value="Cartão de Débito">🏧 Cartão de Débito</option>
-                                <option value="Dinheiro">💵 Dinheiro</option>
-                                <option value="Boleto">📄 Boleto</option>
+                            <label class="form-label">Forma de Pagamento</label>
+                            <select class="form-select" name="pagamento">
+                                <option value="PIX">PIX</option>
+                                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                <option value="Cartão de Débito">Cartão de Débito</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Boleto">Boleto</option>
                             </select>
                         </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i> Adicionar</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabela de Transações -->
+            <div class="col-md-8">
+                <div class="card p-4">
+                    <h5 class="mb-3 text-secondary"><i class="fas fa-list me-2"></i>Histórico do Mês</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in dados %}
+                                <tr>
+                                    <td>{{ item['data'] }}</td>
+                                    <td>{{ item['descricao'] }}</td>
+                                    <td><span class="badge bg-secondary">{{ item['categoria'] }}</span></td>
+                                    <td><span class="badge bg-info text-dark">{{ item['pagamento'] }}</span></td>
+                                    <td class="fw-bold {% if item['tipo'] == 'entrada' %}text-success{% else %}text-danger{% endif %}">
+                                        {% if item['tipo'] == 'entrada' %}+{% else %}-{% endif %} R$ {{ "%.2f"|format(item['valor']) }}
+                                    </td>
+                                    <td>
+                                        <a href="/deletar/{{ item['id'] }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir?')"><i class="fas fa-trash"></i></a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Nenhuma transação registrada neste mês.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Salvar Transação</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Alterar Foto de Perfil -->
-    <div class="modal fade" id="modalFoto" tabindex="-1">
+    <!-- Modal para alterar foto de perfil -->
+    <div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form action="/atualizar_foto" method="POST">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title"><i class="fas fa-camera me-2"></i>Alterar Foto de Perfil</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Alterar Foto de Perfil</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Link da Imagem</label>
-                            <input type="url" class="form-control" name="foto_url" placeholder="Cole o link direto da sua imagem aqui (ex: https://...)" required>
-                            <div class="form-text mt-2">
-                                <strong>Dica:</strong> Para pegar um link fácil, você pode clicar com o botão direito em qualquer imagem na internet, selecionar <em>"Copiar endereço da imagem"</em> e colar aqui.
-                            </div>
+                            <label class="form-label">Link da Imagem (URL)</label>
+                            <input type="url" class="form-control" name="foto_url" placeholder="https://exemplo.com/sua-foto.jpg" required>
+                            <div class="form-text">Cole o link direto de uma imagem da internet para usar como seu avatar.</div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -247,16 +178,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Script para registrar o Service Worker do PWA -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
-            .then(() => console.log("Service Worker registrado com sucesso!"))
-            .catch((err) => console.log("Erro ao registrar Service Worker: ", err));
-        }
-    </script>
 </body>
 </html>
