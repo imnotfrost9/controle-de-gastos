@@ -3,9 +3,13 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import psycopg2
 import psycopg2.extras
 from datetime import datetime
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta_super_segura'
+
+# Corrige o erro de "Bad Request" em ambientes de nuvem (como o Render)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 def conectar_banco():
     database_url = os.environ.get('DATABASE_URL')
