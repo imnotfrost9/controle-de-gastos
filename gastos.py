@@ -21,11 +21,12 @@ def inicializar_banco():
     conn = conectar_banco()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
-    # Cria a tabela de usuários
+    # Cria a tabela de usuários com suporte a foto de perfil
     cur.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
-            senha TEXT NOT NULL
+            senha TEXT NOT NULL,
+            foto TEXT
         )
     ''')
     
@@ -38,6 +39,7 @@ def inicializar_banco():
             valor REAL NOT NULL,
             tipo TEXT NOT NULL,
             categoria TEXT NOT NULL,
+            pagamento TEXT,
             data TEXT NOT NULL,
             fixo TEXT
         )
@@ -90,7 +92,9 @@ def cadastro():
         
         senha_criptografada = generate_password_hash(senha)
         
-        cur.execute('INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)', (usuario, senha_criptografada))
+        # Insere usuário novo com foto vazia padrão
+        cur.execute('INSERT INTO usuarios (usuario, senha, foto) VALUES (%s, %s, %s)', 
+                    (usuario, senha_criptografada, 'https://cdn-icons-png.flaticon.com/512/149/149071.png'))
         conn.commit()
         
         cur.close()
@@ -99,6 +103,23 @@ def cadastro():
         return render_template('cadastro.html', sucesso="Conta criada com sucesso! Faça o login.")
         
     return render_template('cadastro.html')
+
+@app.route('/atualizar_foto', methods=['POST'])
+def atualizar_foto():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+        
+    usuario_atual = session['usuario']
+    nova_foto = request.form.get('foto_url')
+    
+    conn = conectar_banco()
+    cur = conn.cursor()
+    cur.execute('UPDATE usuarios SET foto = %s WHERE usuario = %s', (nova_foto, usuario_atual))
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    return redirect(url_for('index'))
 
 @app.route('/sair')
 def sair():
@@ -115,6 +136,13 @@ def index():
     
     conn = conectar_banco()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    # Busca dados do usuário (incluindo a foto)
+    cur.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario_atual,))
+    user_data = cur.fetchone()
+    foto_usuario = user_data['foto'] if user_data and user_data['foto'] else 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
+    
+    # Busca os gastos
     cur.execute('SELECT * FROM gastos WHERE usuario = %s', (usuario_atual,))
     gastos_db = cur.fetchall()
     
@@ -151,6 +179,7 @@ def index():
     
     return render_template('index.html',
                            usuario_atual=usuario_atual,
+                           foto_usuario=foto_usuario,
                            dados=dados_atual,
                            total_entradas=total_entradas,
                            total_saidas=total_saidas,
@@ -172,6 +201,7 @@ def adicionar():
     valor = float(request.form['valor'].replace(',', '.'))
     tipo = request.form['tipo']
     categoria = request.form['categoria']
+    pagamento = request.form.get('pagamento', 'PIX')
     fixo = request.form.get('fixo', 'nao')
     
     mes = int(request.form.get('mes', datetime.datetime.now().month))
@@ -187,9 +217,9 @@ def adicionar():
     conn = conectar_banco()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO gastos (id, usuario, descricao, valor, tipo, categoria, data, fixo) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (novo_id, usuario_atual, descricao, valor, tipo, categoria, data_registro, fixo))
+        INSERT INTO gastos (id, usuario, descricao, valor, tipo, categoria, pagamento, data, fixo) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ''', (novo_id, usuario_atual, descricao, valor, tipo, categoria, pagamento, data_registro, fixo))
     
     conn.commit()
     cur.close()
