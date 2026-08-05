@@ -1,31 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Cadastro - Controle Financeiro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta - Controle de Gastos</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilo padrão do Card de Autenticação (caso não esteja no style.css) */
+        .auth-card {
+            background: var(--card-bg, #ffffff);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .auth-card h2 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: var(--text-color, #333);
+        }
+        .auth-card form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .auth-card input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color, #ccc);
+            border-radius: 8px;
+            background: var(--bg-color, #f9f9f9);
+            color: var(--text-color, #333);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .auth-card button {
+            background: var(--success-color, #28a745);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .auth-card button:hover {
+            opacity: 0.9;
+        }
+        .auth-links {
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        .auth-links a {
+            color: var(--primary-color, #007bff);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
-<body class="login-body">
-    <div class="login-box animate-fade">
+<body>
+
+    <div class="auth-card">
         <h2>Criar Nova Conta</h2>
         
-        {% if erro %}
-            <p style="color: #ff4757; font-weight: bold; margin-bottom: 10px;">{{ erro }}</p>
-        {% endif %}
-        
-        {% if sucesso %}
-            <p style="color: #28a745; font-weight: bold; margin-bottom: 10px;">{{ sucesso }}</p>
-            <a href="/login" class="btn-login" style="display: block; text-decoration: none; margin-top: 10px; line-height: 40px;">Ir para o Login</a>
-        {% else %}
-            <form method="POST">
-                <input type="text" name="username" placeholder="Escolha um nome de username" required>
-                <input type="password" name="senha" placeholder="Crie uma senha" required>
-                <button type="submit" class="btn-login" style="background: #28a745;">Cadastrar</button>
-            </form>
-            <p style="margin-top: 15px; font-size: 14px;">
-                Já possui conta? <a href="/login" style="color: #007bff; text-decoration: none; font-weight: bold;">Faça Login</a>
-            </p>
-        {% endif %}
+        <!-- Exibição de mensagens de erro/sucesso do Flask, se houver -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div style="color: var(--danger-color, #dc3545); margin-bottom: 15px; font-size: 0.9rem;">
+              {% for message in messages %}
+                <p>{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form action="/cadastrar" method="POST">
+            <input type="text" name="username" placeholder="Escolha um username" required autocomplete="off">
+            <input type="password" name="senha" placeholder="Crie uma senha" required>
+            <button type="submit">Cadastrar</button>
+        </form>
+
+        <div class="auth-links">
+            <span>Já possui conta? <a href="/login">Faça Login</a></span>
+        </div>
     </div>
+
 </body>
 </html>

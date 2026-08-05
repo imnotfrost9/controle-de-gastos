@@ -2,23 +2,123 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Controle Financeiro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - Controle de Gastos</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .box-login { background: var(--card-bg); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; max-width: 400px; text-align: center; }
+        /* Ajuste crucial para centralizar perfeitamente no celular e no PC */
+        body {
+            background-color: var(--bg-color, #f4f6f9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Altura para navegadores antigos */
+            min-height: 100dvh; /* Altura dinâmica que resolve o bug de espaçamento no iOS/Safari */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        .auth-card {
+            background: var(--card-bg, #ffffff);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px; /* Garante que não fique esticado na tela do PC */
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: var(--text-color, #333);
+        }
+
+        .auth-card form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-card input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color, #ccc);
+            border-radius: 8px;
+            background: var(--bg-color, #f9f9f9);
+            color: var(--text-color, #333);
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .auth-card input:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+
+        .auth-card button {
+            background: #28a745; /* Verde do seu botão */
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .auth-card button:hover {
+            opacity: 0.9;
+        }
+
+        .auth-links {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .auth-links a {
+            color: #6f42c1; /* Cor roxa do link de cadastro baseada na sua print */
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
-    <div class="box-login">
+
+    <div class="auth-card">
         <h2>Entrar</h2>
-        {% if erro %}<p style="color: red;">{{ erro }}</p>{% endif %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="username" required>
+        
+        <!-- Exibição de mensagens de erro/sucesso -->
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div style="color: #dc3545; margin-bottom: 15px; font-size: 0.9rem;">
+              {% for message in messages %}
+                <p style="margin: 0;">{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form action="/login" method="POST">
+            <input type="text" name="username" placeholder="username" required autocomplete="off">
             <input type="password" name="senha" placeholder="Senha" required>
-            <button type="submit" class="btn-salvar">Entrar</button>
+            <button type="submit">Entrar</button>
         </form>
-        <p style="margin-top: 15px;">Não tem conta? <a href="/cadastro">Cadastre-se</a></p>
+
+        <div class="auth-links">
+            <span>Não tem conta? <a href="/cadastro">Cadastre-se</a></span>
+        </div>
     </div>
+
 </body>
 </html>
