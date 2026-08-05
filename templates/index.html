@@ -9,9 +9,10 @@
 </head>
 <body>
     <div class="container">
+        <!-- Topo / Header -->
         <header class="header">
             <div class="user-profile">
-                <img src="{{ foto_usuario }}" alt="Foto de Perfil" id="fotoPerfilBtn" title="Clique para alterar a foto">
+                <img src="{{ foto_usuario }}" alt="Foto de Perfil" id="fotoPerfilBtn" title="Clique para alterar a foto" class="avatar-img">
                 <span>Olá, <strong>{{ usuario_atual }}</strong></span>
             </div>
             <div class="header-actions">
@@ -22,6 +23,7 @@
             </div>
         </header>
 
+        <!-- Card de Resumo Financeiro -->
         <section class="resumo-card">
             <div class="resumo-header">
                 <h2>Resumo - {{ nome_mes_atual }} de {{ ano_atual }}</h2>
@@ -45,35 +47,37 @@
             </div>
         </section>
 
+        <!-- Filtro de Mês e Ano -->
         <section class="filtro-mes">
             <form method="GET" action="/" class="form-filtro">
-                <select name="mes" onchange="this.form.submit()">
+                <select name="mes" onchange="this.form.submit()" class="input-padrao">
                     {% for m, nome in [(1, 'Janeiro'), (2, 'Fevereiro'), (3, 'Março'), (4, 'Abril'), (5, 'Maio'), (6, 'Junho'), (7, 'Julho'), (8, 'Agosto'), (9, 'Setembro'), (10, 'Outubro'), (11, 'Novembro'), (12, 'Dezembro')] %}
                         <option value="{{ m }}" {% if m == mes_atual %}selected{% endif %}>{{ nome }}</option>
                     {% endfor %}
                 </select>
-                <input type="number" name="ano" value="{{ ano_atual }}" onchange="this.form.submit()" style="width: 90px;">
+                <input type="number" name="ano" value="{{ ano_atual }}" onchange="this.form.submit()" class="input-padrao ano-input">
             </form>
         </section>
 
+        <!-- Formulário de Adicionar Transação -->
         <section class="form-section">
             <form action="/adicionar" method="POST" class="form-transacao">
                 <input type="hidden" name="mes" value="{{ mes_atual }}">
                 <input type="hidden" name="ano" value="{{ ano_atual }}">
-                <input type="text" name="descricao" placeholder="Descrição do gasto ou ganho" required>
-                <input type="text" name="valor" placeholder="Valor (Ex: 150,00)" required>
-                <select name="tipo">
+                <input type="text" name="descricao" placeholder="Descrição do gasto ou ganho" required class="input-padrao">
+                <input type="text" name="valor" placeholder="Valor (Ex: 150,00)" required class="input-padrao">
+                <select name="tipo" class="input-padrao">
                     <option value="saida">Saída</option>
                     <option value="entrada">Entrada</option>
                 </select>
-                <select name="categoria">
+                <select name="categoria" class="input-padrao">
                     <option value="Alimentação">Alimentação</option>
                     <option value="Transporte">Transporte</option>
                     <option value="Lazer">Lazer</option>
                     <option value="Contas">Contas</option>
                     <option value="Outros" selected>Outros</option>
                 </select>
-                <select name="pagamento">
+                <select name="pagamento" class="input-padrao">
                     <option value="PIX" selected>PIX</option>
                     <option value="Cartão de Crédito">Cartão de Crédito</option>
                     <option value="Dinheiro">Dinheiro</option>
@@ -83,54 +87,59 @@
             </form>
         </section>
 
+        <!-- Tabela de Transações -->
         <section class="tabela-section">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                        <th>Categoria</th>
-                        <th>Pagamento</th>
-                        <th>Valor</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in dados %}
-                    <tr>
-                        <td>{{ item.data }}</td>
-                        <td>{{ item.descricao }}</td>
-                        <td>{{ item.categoria }}</td>
-                        <td>{{ item.pagamento }}</td>
-                        <td class="{% if item.tipo == 'entrada' %}texto-entrada{% else %}texto-saida{% endif %} valor-censuravel">
-                            {% if item.tipo == 'entrada' %}+ {% else %}- {% endif %}R$ {{ "%.2f"|format(item.valor)|replace('.', ',') }}
-                        </td>
-                        <td>
-                            <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-deletar" title="Excluir"><i class="fa-solid fa-trash"></i></a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="sem-registros">Nenhuma transação registrada neste mês.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="tabela-transacoes">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Pagamento</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in dados %}
+                        <tr>
+                            <td>{{ item.data }}</td>
+                            <td>{{ item.descricao }}</td>
+                            <td>{{ item.categoria }}</td>
+                            <td>{{ item.pagamento }}</td>
+                            <td class="{% if item.tipo == 'entrada' %}texto-entrada{% else %}texto-saida{% endif %} valor-censuravel">
+                                {% if item.tipo == 'entrada' %}+ {% else %}- {% endif %}R$ {{ "%.2f"|format(item.valor)|replace('.', ',') }}
+                            </td>
+                            <td>
+                                <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-deletar" title="Excluir"><i class="fa-solid fa-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="sem-registros">Nenhuma transação registrada neste mês.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 
+    <!-- Modal para Alterar Foto -->
     <div id="modalFoto" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close" id="fecharModal">&times;</span>
             <h3>Alterar Foto de Perfil</h3>
             <form action="/atualizar_foto" method="POST">
-                <input type="text" name="foto_url" placeholder="Cole o link da nova imagem aqui" required style="width: 100%; margin: 10px 0; padding: 8px;">
-                <button type="submit" class="btn-adicionar">Salvar Foto</button>
+                <input type="text" name="foto_url" placeholder="Cole o link da nova imagem aqui" required class="input-padrao" style="margin: 15px 0;">
+                <button type="submit" class="btn-adicionar" style="width: 100%;">Salvar Foto</button>
             </form>
         </div>
     </div>
 
     <script>
+        // Ocultar / Exibir Saldo
         const btnToggleSaldo = document.getElementById('btnToggleSaldo');
         const iconeOlho = document.getElementById('iconeOlho');
         const valoresCensuraveis = document.querySelectorAll('.valor-censuravel');
@@ -150,6 +159,7 @@
             iconeOlho.classList.toggle('fa-eye-slash');
         });
 
+        // Tema Escuro / Claro
         const btnTema = document.getElementById('btnTema');
         const iconeTema = btnTema.querySelector('i');
         
@@ -169,11 +179,12 @@
             }
         });
 
+        // Modal da Foto
         const imgPerfil = document.getElementById('fotoPerfilBtn');
         const modalFoto = document.getElementById('modalFoto');
         const fecharModal = document.getElementById('fecharModal');
 
-        imgPerfil.addEventListener('click', () => { modalFoto.style.display = 'block'; });
+        imgPerfil.addEventListener('click', () => { modalFoto.style.display = 'flex'; });
         fecharModal.addEventListener('click', () => { modalFoto.style.display = 'none'; });
         window.addEventListener('click', (e) => { if (e.target === modalFoto) modalFoto.style.display = 'none'; });
     </script>
