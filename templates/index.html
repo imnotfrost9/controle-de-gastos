@@ -1,183 +1,189 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Gastos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .profile-img { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 2px solid #dee2e6; cursor: pointer; }
-    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="#"><i class="fas fa-wallet me-2"></i>Controle de Gastos</a>
-            <div class="d-flex align-items-center text-white">
-                <img src="{{ foto_usuario }}" alt="Foto de Perfil" class="profile-img me-2" data-bs-toggle="modal" data-bs-target="#modalFoto" title="Clique para alterar a foto">
-                <span class="me-3">Olá, <strong>{{ usuario_atual }}</strong></span>
-                <a href="/sair" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i> Sair</a>
-            </div>
-        </div>
-    </nav>
-
     <div class="container">
-        <!-- Cards de Resumo -->
-        <div class="row text-center mb-4">
-            <div class="col-md-4 mb-3">
-                <div class="card p-3 bg-success text-white">
-                    <h5>Entradas</h5>
-                    <h3>R$ {{ "%.2f"|format(total_entradas) }}</h3>
-                </div>
+        <header class="header">
+            <div class="user-profile">
+                <img src="{{ foto_usuario }}" alt="Foto de Perfil" id="fotoPerfilBtn" title="Clique para alterar a foto">
+                <span>Olá, <strong>{{ usuario_atual }}</strong></span>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card p-3 bg-danger text-white">
-                    <h5>Saídas</h5>
-                    <h3>R$ {{ "%.2f"|format(total_saidas) }}</h3>
-                </div>
+            <div class="header-actions">
+                <button id="btnTema" class="btn-icon" title="Alternar Tema Claro/Escuro">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <a href="/sair" class="btn-sair" title="Sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card p-3 {% if saldo_total >= 0 %}bg-primary{% else %}bg-warning text-dark{% endif %} text-white">
-                    <h5>Saldo</h5>
-                    <h3>R$ {{ "%.2f"|format(saldo_total) }}</h3>
-                </div>
-            </div>
-        </div>
+        </header>
 
-        <!-- Seletor de Meses -->
-        <div class="card p-3 mb-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <h4 class="mb-0 text-secondary"><i class="fas fa-calendar-alt me-2"></i>{{ nome_mes_atual }} de {{ ano_atual }}</h4>
-                <div class="btn-group mt-2 mt-md-0">
-                    {% set meses = [(1, "Jan"), (2, "Fev"), (3, "Mar"), (4, "Abr"), (5, "Mai"), (6, "Jun"), (7, "Jul"), (8, "Ago"), (9, "Set"), (10, "Out"), (11, "Nov"), (12, "Dez")] %}
-                    {% for m_num, m_nome in meses %}
-                        <a href="/?mes={{ m_num }}&ano={{ ano_atual }}" class="btn btn-outline-secondary {% if mes_atual == m_num %}active{% endif %}">{{ m_nome }}</a>
+        <!-- Seção de Resumo Financeiro com botão de Ocultar Saldo -->
+        <section class="resumo-card">
+            <div class="resumo-header">
+                <h2>Resumo - {{ nome_mes_atual }} de {{ ano_atual }}</h2>
+                <button id="btnToggleSaldo" class="btn-icon" title="Ocultar/Exibir Saldo">
+                    <i class="fa-solid fa-eye" id="iconeOlho"></i>
+                </button>
+            </div>
+            <div class="valores-grid">
+                <div class="card-valor entrada">
+                    <span>Entradas</span>
+                    <h3 class="valor-censuravel">R$ {{ "%.2f"|format(total_entradas)|replace('.', ',') }}</h3>
+                </div>
+                <div class="card-valor saida">
+                    <span>Saídas</span>
+                    <h3 class="valor-censuravel">R$ {{ "%.2f"|format(total_saidas)|replace('.', ',') }}</h3>
+                </div>
+                <div class="card-valor saldo {% if saldo_total >= 0 %}positivo{% else %}negativo{% endif %}">
+                    <span>Saldo Total</span>
+                    <h3 class="valor-censuravel">R$ {{ "%.2f"|format(saldo_total)|replace('.', ',') }}</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtro de Meses e Anos -->
+        <section class="filtro-mes">
+            <form method="GET" action="/" class="form-filtro">
+                <select name="mes" onchange="this.form.submit()">
+                    {% for m, nome in [(1, 'Janeiro'), (2, 'Fevereiro'), (3, 'Março'), (4, 'Abril'), (5, 'Maio'), (6, 'Junho'), (7, 'Julho'), (8, 'Agosto'), (9, 'Setembro'), (10, 'Outubro'), (11, 'Novembro'), (12, 'Dezembro')] %}
+                        <option value="{{ m }}" {% if m == mes_atual %}selected{% endif %}>{{ nome }}</option>
                     {% endfor %}
-                </div>
-            </div>
-        </div>
+                </select>
+                <input type="number" name="ano" value="{{ ano_atual }}" onchange="this.form.submit()" style="width: 90px;">
+            </form>
+        </section>
 
-        <div class="row">
-            <!-- Formulário para Adicionar Transação -->
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h5 class="mb-3 text-secondary"><i class="fas fa-plus-circle me-2"></i>Nova Transação</h5>
-                    <form action="/adicionar" method="POST">
-                        <input type="hidden" name="mes" value="{{ mes_atual }}">
-                        <input type="hidden" name="ano" value="{{ ano_atual }}">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <input type="text" class="form-control" name="descricao" required placeholder="Ex: Supermercado">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Valor (R$)</label>
-                            <input type="text" class="form-control" name="valor" required placeholder="0.00">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Tipo</label>
-                            <select class="form-select" name="tipo">
-                                <option value="saida">Saída (Gasto)</option>
-                                <option value="entrada">Entrada (Receita)</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Categoria</label>
-                            <select class="form-select" name="categoria">
-                                <option value="Alimentação / Mercado">Alimentação / Mercado</option>
-                                <option value="Farmácia / Saúde">Farmácia / Saúde</option>
-                                <option value="Moradia">Moradia</option>
-                                <option value="Transporte">Transporte</option>
-                                <option value="Lazer">Lazer</option>
-                                <option value="Outros">Outros</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Forma de Pagamento</label>
-                            <select class="form-select" name="pagamento">
-                                <option value="PIX">PIX</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Cartão de Débito">Cartão de Débito</option>
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="Boleto">Boleto</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i> Adicionar</button>
-                    </form>
-                </div>
-            </div>
+        <!-- Formulário para Adicionar Transação -->
+        <section class="form-section">
+            <form action="/adicionar" method="POST" class="form-transacao">
+                <input type="hidden" name="mes" value="{{ mes_atual }}">
+                <input type="hidden" name="ano" value="{{ ano_atual }}">
+                <input type="text" name="descricao" placeholder="Descrição do gasto ou ganho" required>
+                <input type="text" name="valor" placeholder="Valor (Ex: 150,00)" required>
+                <select name="tipo">
+                    <option value="saida">Saída</option>
+                    <option value="entrada">Entrada</option>
+                </select>
+                <select name="categoria">
+                    <option value="Alimentação">Alimentação</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Lazer">Lazer</option>
+                    <option value="Contas">Contas</option>
+                    <option value="Outros" selected>Outros</option>
+                </select>
+                <select name="pagamento">
+                    <option value="PIX" selected>PIX</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Débito">Débito</option>
+                </select>
+                <button type="submit" class="btn-adicionar">Adicionar</button>
+            </form>
+        </section>
 
-            <!-- Tabela de Transações -->
-            <div class="col-md-8">
-                <div class="card p-4">
-                    <h5 class="mb-3 text-secondary"><i class="fas fa-list me-2"></i>Histórico do Mês</h5>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Descrição</th>
-                                    <th>Categoria</th>
-                                    <th>Pagamento</th>
-                                    <th>Valor</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in dados %}
-                                <tr>
-                                    <td>{{ item['data'] }}</td>
-                                    <td>{{ item['descricao'] }}</td>
-                                    <td><span class="badge bg-secondary">{{ item['categoria'] }}</span></td>
-                                    <td><span class="badge bg-info text-dark">{{ item['pagamento'] }}</span></td>
-                                    <td class="fw-bold {% if item['tipo'] == 'entrada' %}text-success{% else %}text-danger{% endif %}">
-                                        {% if item['tipo'] == 'entrada' %}+{% else %}-{% endif %} R$ {{ "%.2f"|format(item['valor']) }}
-                                    </td>
-                                    <td>
-                                        <a href="/deletar/{{ item['id'] }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Deseja realmente excluir?')"><i class="fas fa-trash"></i></a>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">Nenhuma transação registrada neste mês.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        <!-- Tabela de Transações -->
+        <section class="tabela-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Pagamento</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in dados %}
+                    <tr>
+                        <td>{{ item.data }}</td>
+                        <td>{{ item.descricao }}</td>
+                        <td>{{ item.categoria }}</td>
+                        <td>{{ item.pagamento }}</td>
+                        <td class="{% if item.tipo == 'entrada' %}texto-entrada{% else %}texto-saida{% endif %} valor-censuravel">
+                            {% if item.tipo == 'entrada' %}+ {% else %}- {% endif %}R$ {{ "%.2f"|format(item.valor)|replace('.', ',') }}
+                        </td>
+                        <td>
+                            <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-deletar" title="Excluir"><i class="fa-solid fa-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="sem-registros">Nenhuma transação registrada neste mês.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <!-- Modal de Alterar Foto -->
+    <div id="modalFoto" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="fecharModal">&times;</span>
+            <h3>Alterar Foto de Perfil</h3>
+            <form action="/atualizar_foto" method="POST">
+                <input type="text" name="foto_url" placeholder="Cole o link da nova imagem aqui" required style="width: 100%; margin: 10px 0; padding: 8px;">
+                <button type="submit" class="btn-adicionar">Salvar Foto</button>
+            </form>
         </div>
     </div>
 
-    <!-- Modal para alterar foto de perfil -->
-    <div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="/atualizar_foto" method="POST">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Alterar Foto de Perfil</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Link da Imagem (URL)</label>
-                            <input type="url" class="form-control" name="foto_url" placeholder="https://exemplo.com/sua-foto.jpg" required>
-                            <div class="form-text">Cole o link direto de uma imagem da internet para usar como seu avatar.</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar Foto</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <script>
+        // Funcionalidade de Ocultar/Exibir Saldo
+        const btnToggleSaldo = document.getElementById('btnToggleSaldo');
+        const iconeOlho = document.getElementById('iconeOlho');
+        const valoresCensuraveis = document.querySelectorAll('.valor-censuravel');
+        let saldoOculto = false;
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        btnToggleSaldo.addEventListener('click', () => {
+            saldoOculto = !saldoOculto;
+            valoresCensuraveis.forEach(el => {
+                if (saldoOculto) {
+                    el.dataset.valorOriginal = el.textContent;
+                    el.textContent = 'R$ ••••••';
+                } else {
+                    el.textContent = el.dataset.valorOriginal || el.textContent;
+                }
+            });
+            iconeOlho.classList.toggle('fa-eye');
+            iconeOlho.classList.toggle('fa-eye-slash');
+        });
+
+        // Funcionalidade de Tema Escuro / Claro
+        const btnTema = document.getElementById('btnTema');
+        const iconeTema = btnTema.querySelector('i');
+        
+        if (localStorage.getItem('tema') === 'escuro') {
+            document.body.classList.add('dark-mode');
+            iconeTema.classList.replace('fa-moon', 'fa-sun');
+        }
+
+        btnTema.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('tema', 'escuro');
+                iconeTema.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                localStorage.setItem('tema', 'claro');
+                iconeTema.classList.replace('fa-sun', 'fa-moon');
+            }
+        });
+
+        // Modal de Foto
+        const imgPerfil = document.getElementById('fotoPerfilBtn');
+        const modalFoto = document.getElementById('modalFoto');
+        const fecharModal = document.getElementById('fecharModal');
+
+        imgPerfil.addEventListener('click', () => { modalFoto.style.display = 'block'; });
+        fecharModal.addEventListener('click', () => { modalFoto.style.display = 'none'; });
+        window.addEventListener('click', (e) => { if (e.target === modalFoto) modalFoto.style.display = 'none'; });
+    </script>
 </body>
 </html>
