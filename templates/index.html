@@ -22,7 +22,6 @@
             </div>
         </header>
 
-        <!-- Seção de Resumo Financeiro com botão de Ocultar Saldo -->
         <section class="resumo-card">
             <div class="resumo-header">
                 <h2>Resumo - {{ nome_mes_atual }} de {{ ano_atual }}</h2>
@@ -46,7 +45,6 @@
             </div>
         </section>
 
-        <!-- Filtro de Meses e Anos -->
         <section class="filtro-mes">
             <form method="GET" action="/" class="form-filtro">
                 <select name="mes" onchange="this.form.submit()">
@@ -58,7 +56,6 @@
             </form>
         </section>
 
-        <!-- Formulário para Adicionar Transação -->
         <section class="form-section">
             <form action="/adicionar" method="POST" class="form-transacao">
                 <input type="hidden" name="mes" value="{{ mes_atual }}">
@@ -86,7 +83,6 @@
             </form>
         </section>
 
-        <!-- Tabela de Transações -->
         <section class="tabela-section">
             <table>
                 <thead>
@@ -123,7 +119,6 @@
         </section>
     </div>
 
-    <!-- Modal de Alterar Foto -->
     <div id="modalFoto" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close" id="fecharModal">&times;</span>
@@ -136,7 +131,6 @@
     </div>
 
     <script>
-        // Funcionalidade de Ocultar/Exibir Saldo
         const btnToggleSaldo = document.getElementById('btnToggleSaldo');
         const iconeOlho = document.getElementById('iconeOlho');
         const valoresCensuraveis = document.querySelectorAll('.valor-censuravel');
@@ -156,7 +150,6 @@
             iconeOlho.classList.toggle('fa-eye-slash');
         });
 
-        // Funcionalidade de Tema Escuro / Claro
         const btnTema = document.getElementById('btnTema');
         const iconeTema = btnTema.querySelector('i');
         
@@ -176,7 +169,6 @@
             }
         });
 
-        // Modal de Foto
         const imgPerfil = document.getElementById('fotoPerfilBtn');
         const modalFoto = document.getElementById('modalFoto');
         const fecharModal = document.getElementById('fecharModal');
