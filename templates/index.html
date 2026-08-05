@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Gastos</title>
     <link rel="stylesheet" href="/static/style.css">
-    <!-- FontAwesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="animate-fade">
     <div class="container">
@@ -14,12 +14,10 @@
         <!-- ================= CABEÇALHO ================= -->
         <header>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <!-- Foto de Perfil clicável para abrir o modal -->
                 <img src="{{ foto_usuario }}" alt="Foto" id="fotoPerfilBtn" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary-color);" title="Alterar foto de perfil">
                 <h1>Olá, {{ usuario_atual }}</h1>
             </div>
             <div class="header-botoes">
-                <!-- Botão de Tema Escuro/Claro -->
                 <button id="btnTema" class="btn-tema" title="Alternar Tema">
                     <i class="fa-solid fa-moon" id="iconeTema"></i> Tema
                 </button>
@@ -29,7 +27,6 @@
 
         <!-- ================= NAVEGAÇÃO DE MESES ================= -->
         <div class="navegacao-mes">
-            <!-- Caso você queira setas de navegação ou mantido o seletor de mês -->
             <a href="/?mes={% if mes_atual > 1 %}{{ mes_atual - 1 }}{% else %}12{% endif %}&ano={% if mes_atual > 1 %}{{ ano_atual }}{% else %}{{ ano_atual - 1 }}{% endif %}" class="btn-mes">
                 <i class="fa-solid fa-chevron-left"></i> Anterior
             </a>
@@ -44,9 +41,8 @@
         <!-- ================= PAINEL DE RESUMO ================= -->
         <div class="painel">
             <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
-                <!-- Botão para Ocultar/Exibir Saldo -->
-                <button id="btnToggleSaldo" class="btn-tema" style="padding: 6px 12px; font-size: 0.85rem;" title="Ocultar/Exibir Valores">
-                    <i class="fa-solid fa-eye" id="iconeOlho"></i> Ocultar Saldo
+                <button id="btnToggleSaldo" class="btn-tema" style="padding: 6px 12px;" title="Ocultar/Exibir Valores">
+                    <i class="fa-solid fa-eye" id="iconeOlho"></i>
                 </button>
             </div>
             
@@ -68,7 +64,7 @@
             </div>
         </div>
 
-        <!-- ================= LINHA DUPLA (FORMULÁRIO E HISTÓRICO) ================= -->
+        <!-- ================= LINHA DUPLA (FORMULÁRIO E GRÁFICO) ================= -->
         <div class="linha-dupla">
             
             <!-- Coluna do Formulário -->
@@ -82,8 +78,8 @@
                     <input type="text" name="valor" placeholder="Valor (ex: 150,00)" required>
                     
                     <select name="tipo" required>
-                        <option value="saida">Saída (Despesa)</option>
-                        <option value="entrada">Entrada (Receita)</option>
+                        <option value="saida">Saída</option>
+                        <option value="entrada">Entrada</option>
                     </select>
 
                     <select name="categoria">
@@ -105,30 +101,37 @@
                 </form>
             </div>
 
-            <!-- Coluna do Histórico / Lista -->
-            <div class="box-metade">
-                <h3><i class="fa-solid fa-list-ul"></i> Histórico do Mês</h3>
-                
-                <ul class="lista-historico">
-                    {% for item in dados %}
-                    <li class="{% if item.tipo == 'entrada' %}item-entrada{% else %}item-saida{% endif %}">
-                        <div class="item-info">
-                            <strong>{{ item.descricao }}</strong>
-                            <small>{{ item.data }} • <span style="text-transform: uppercase; font-weight: 600;">{{ item.pagamento }}</span> <span class="badge-cat">{{ item.categoria }}</span></small>
-                        </div>
-                        <div class="item-valor">
-                            <span class="{% if item.tipo == 'entrada' %}texto-positivo{% else %}texto-negativo{% endif %} valor-censuravel">
-                                {% if item.tipo == 'entrada' %}+ {% else %}- {% endif %}R$ {{ "%.2f"|format(item.valor)|replace('.', ',') }}
-                            </span>
-                            <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-apagar" title="Excluir"><i class="fa-solid fa-trash-can"></i></a>
-                        </div>
-                    </li>
-                    {% else %}
-                    <p style="text-align: center; opacity: 0.6; padding: 20px 0;">Nenhuma transação registrada neste mês.</p>
-                    {% endfor %}
-                </ul>
+            <!-- Coluna do Gráfico -->
+            <div class="box-metade grafico-box">
+                <h3><i class="fa-solid fa-chart-pie"></i> Gráfico de Gastos</h3>
+                <div class="tamanho-grafico">
+                    <canvas id="graficoCategorias"></canvas>
+                </div>
             </div>
 
+        </div>
+
+        <!-- ================= HISTÓRICO DO MÊS ================= -->
+        <div class="box-metade" style="width: 100%; margin-bottom: 30px;">
+            <h3><i class="fa-solid fa-list-ul"></i> Histórico do Mês</h3>
+            <ul class="lista-historico">
+                {% for item in dados %}
+                <li class="{% if item.tipo == 'entrada' %}item-entrada{% else %}item-saida{% endif %}">
+                    <div class="item-info">
+                        <strong>{{ item.descricao }}</strong>
+                        <small>{{ item.data }} • <span style="text-transform: uppercase; font-weight: 600;">{{ item.pagamento }}</span> <span class="badge-cat">{{ item.categoria }}</span></small>
+                    </div>
+                    <div class="item-valor">
+                        <span class="{% if item.tipo == 'entrada' %}texto-positivo{% else %}texto-negativo{% endif %} valor-censuravel">
+                            {% if item.tipo == 'entrada' %}+ {% else %}- {% endif %}R$ {{ "%.2f"|format(item.valor)|replace('.', ',') }}
+                        </span>
+                        <a href="/deletar/{{ item.id }}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn-apagar" title="Excluir"><i class="fa-solid fa-trash-can"></i></a>
+                    </div>
+                </li>
+                {% else %}
+                <p style="text-align: center; opacity: 0.6; padding: 20px 0;">Nenhuma transação registrada neste mês.</p>
+                {% endfor %}
+            </ul>
         </div>
 
     </div>
@@ -140,7 +143,7 @@
         <a href="/sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
     </div>
 
-    <!-- ================= MODAL DE ALTERAR FOTO ================= -->
+    <!-- ================= MODAL DE FOTO ================= -->
     <div id="modalFoto" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center;">
         <div style="background: var(--card-bg); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); position: relative;">
             <span id="fecharModal" style="position: absolute; right: 15px; top: 10px; cursor: pointer; font-size: 22px; font-weight: bold;">&times;</span>
@@ -152,9 +155,8 @@
         </div>
     </div>
 
-    <!-- ================= SCRIPTS DE FUNCIONALIDADE ================= -->
+    <!-- ================= SCRIPTS ================= -->
     <script>
-        // 1. Alternar Tema Claro / Escuro (baseado na classe .tema-escuro do seu CSS)
         const btnTema = document.getElementById('btnTema');
         const iconeTema = document.getElementById('iconeTema');
         
@@ -174,7 +176,6 @@
             }
         });
 
-        // 2. Ocultar / Exibir Saldo
         const btnToggleSaldo = document.getElementById('btnToggleSaldo');
         const iconeOlho = document.getElementById('iconeOlho');
         const valoresCensuraveis = document.querySelectorAll('.valor-censuravel');
@@ -190,16 +191,45 @@
                     el.textContent = el.dataset.valorOriginal || el.textContent;
                 }
             });
-            if (saldoOculto) {
-                iconeOlho.classList.replace('fa-eye', 'fa-eye-slash');
-                btnToggleSaldo.innerHTML = '<i class="fa-solid fa-eye-slash" id="iconeOlho"></i> Exibir Saldo';
-            } else {
-                iconeOlho.classList.replace('fa-eye-slash', 'fa-eye');
-                btnToggleSaldo.innerHTML = '<i class="fa-solid fa-eye" id="iconeOlho"></i> Ocultar Saldo';
+            iconeOlho.classList.toggle('fa-eye');
+            iconeOlho.classList.toggle('fa-eye-slash');
+        });
+
+        const ctx = document.getElementById('graficoCategorias').getContext('2d');
+        const transacoes = [
+            {% for item in dados %}
+                {% if item.tipo == 'saida' %}
+                { categoria: "{{ item.categoria }}", valor: {{ item.valor }} },
+                {% endif %}
+            {% endfor %}
+        ];
+
+        const categoriasTotais = {};
+        transacoes.forEach(t => {
+            categoriasTotais[t.categoria] = (categoriasTotais[t.categoria] || 0) + t.valor;
+        });
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoriasTotais).length > 0 ? Object.keys(categoriasTotais) : ['Nenhum gasto'],
+                datasets: [{
+                    data: Object.values(categoriasTotais).length > 0 ? Object.values(categoriasTotais) : [1],
+                    backgroundColor: ['#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') }
+                    }
+                }
             }
         });
 
-        // 3. Controle do Modal de Foto de Perfil
         const fotoPerfilBtn = document.getElementById('fotoPerfilBtn');
         const btnModalMobile = document.getElementById('btnModalMobile');
         const modalFoto = document.getElementById('modalFoto');
@@ -213,15 +243,8 @@
         fotoPerfilBtn.addEventListener('click', abrirModal);
         if(btnModalMobile) btnModalMobile.addEventListener('click', abrirModal);
 
-        fecharModal.addEventListener('click', () => {
-            modalFoto.style.display = 'none';
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target === modalFoto) {
-                modalFoto.style.display = 'none';
-            }
-        });
+        fecharModal.addEventListener('click', () => { modalFoto.style.display = 'none'; });
+        window.addEventListener('click', (e) => { if (e.target === modalFoto) modalFoto.style.display = 'none'; });
     </script>
 </body>
 </html>
